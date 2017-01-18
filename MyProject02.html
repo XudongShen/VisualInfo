@@ -1,0 +1,531 @@
+<html>  
+<head>  
+    <meta charset="utf-8">  
+    <title>MyProject02</title>  
+</head> 
+
+<style>
+    body{
+        background-color: #151515
+    }
+	.axis path,
+    .axis line{
+        fill: none;
+        stroke: grey;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-family: sans-serif;
+        font-size: 15px;
+        stroke: #151515;
+    }
+
+	div{ display: inline }
+
+</style>
+
+<body>  
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script>
+
+    var focusS = -1
+    var focusP = -1
+    var focusD = -1
+
+d3.json("tset.json", function(error, graph) {
+    if (error) throw error
+    var source = graph.source
+    var protocol = graph.protocol
+    var destination = graph.destination
+    var path = graph.path
+    var sourceFlow = graph.sourceFlow
+    var destinationFlow = graph.destinationFlow
+    var timeFlow = graph.allFlow    
+    var maxFlow = d3.max(timeFlow)
+
+    var pathcolor = ["#8fd1a3","#8592dc","#69ed88","#ef92f8","#7ffc76","#86be6e","#bab7d2","#abb366","#f1f4ea","#98ec6b","#c266b9","#a5877c","#daee9a","#ccc2c6","#d48db4","#b0f9a3","#cbeefb","#ceaf75","#f96d68","#ccf473","#b2e66b","#6ceddc","#73aaf1","#6aa1c0","#e9fc91","#987290","#a88393","#b3a5a6","#c0a1ac","#866ef7","#d869f8","#6783dc","#9bc3ea","#77c09e","#97e7a2","#f09c71","#6896e3","#ecfbca","#fc7568","#de96f3","#dceaec","#e177ec","#c3df9b","#dcdab5","#d5fd91","#a69698","#d0756a","#95a2ea","#ce89b5","#dd95b1","#fb6ddd","#7f90c8","#ed68c6","#e3dfbc","#ba89e6"]
+    var padding = {left:110,right:110,top:50,bottom:50}
+    var padding2 = {left:100,right:120,top:60,bottom:20}
+    var width = 900
+    var widthD = 450
+    var height = 900    
+    var rectpadding = 8
+    var rectheight = 30
+
+    var svg = d3.select("body")              
+                .append("svg")            
+                .attr("width", width+widthD)      
+                .attr("height", height)
+
+    var scaleS = d3.scale.ordinal()
+                .domain(d3.range(source.length))
+                .rangeRoundBands([0, height - padding.top - padding.bottom]);
+    var scaleP = d3.scale.ordinal()
+                .domain(d3.range(protocol.length))
+                .rangeRoundBands([0, height - padding.top - padding.bottom]);
+    var scaleD = d3.scale.ordinal()
+                .domain(d3.range(destination.length))
+                .rangeRoundBands([0, height - padding.top - padding.bottom]);
+    var axisS = d3.svg.axis()
+                .scale(scaleS)
+                .orient("left")
+    var axisP = d3.svg.axis()
+                .scale(scaleP)
+                .orient("right")
+    var axisD = d3.svg.axis()  
+                .scale(scaleD)
+                .orient("right")
+
+    svg.append("g")
+                .attr("class","axis")
+                .attr("transform","translate("+padding.left+","+padding.top+")")
+                .call(axisS)
+    svg.append("g")
+                .attr("class","axis")
+                .attr("transform","translate("+(+width/2)+","+padding.top+")")
+                .call(axisP)
+    svg.append("g")
+                .attr("class","axis")
+                .attr("transform","translate("+(+width - padding.right)+","+padding.top+")")
+                .call(axisD)
+
+    var innerSegmentS = (height - padding.top - padding.bottom)/source.length
+    var innerSegmentP = (height - padding.top - padding.bottom)/protocol.length
+    var innerSegmentD = (height - padding.top - padding.bottom)/destination.length
+
+    var linear = d3.scale.linear()
+            .domain([0,maxFlow])
+            .range([0,widthD-padding2.left-padding2.right])
+
+    var rects = svg.selectAll(".MyRect")
+                .data(timeFlow)
+                .enter()
+                .append("rect")
+                .attr("class","MyRect")
+                .attr("transform","translate(" + (padding2.left + width) + "," + padding2.top + ")")
+                .attr("x",function(d,i){
+                    return rectpadding/2
+                })
+                .attr("y",function(d,i){
+                    return i*rectheight - rectpadding/2
+                })
+                .attr("width",function(d,i){
+                    return linear(d)-rectpadding/2
+                })
+                .attr("height",function(d,i){
+                    return rectheight - rectpadding/2
+                })
+                .attr("fill","#8fd1a3")
+
+    var lineS2P = svg.selectAll(".MyLineS2P")
+                .data(path)
+                .enter()
+                .append("line")
+                .attr("class","MyLineS2P")
+                .attr("transform","translate("+padding.left+"," + padding.top + ")")
+                .attr("x1",0)
+                .attr("y1",function(d,i){
+                    return (d[0]+1/2)*innerSegmentS;
+                })
+                .attr("x2",width/2-padding.left)
+                .attr("y2",function(d,i){
+                    return (d[1]+1/2)*innerSegmentP;
+                })
+                .attr("stroke",function(d,i){
+                    return pathcolor[d[1]]
+                })
+                .attr("stroke-width",1)
+                .style("opacity",0.8)
+                //.property("opacity",0.8)
+
+    var lineP2D = svg.selectAll(".MyLineP2D")
+                .data(path)
+                .enter()
+                .append("line")
+                .attr("class","MyLineP2D")
+                .attr("transform","translate("+padding.left+","+padding.top+")")
+                .attr("x1",width/2-padding.left)
+                .attr("y1",function(d,i){
+                    return (d[1]+1/2)*innerSegmentP;
+                })
+                .attr("x2",width-2*padding.left)
+                .attr("y2",function(d,i){
+                    return (d[2]+1/2)*innerSegmentD;
+                })
+                .attr("stroke",function(d,i){
+                    return pathcolor[d[1]]
+                })
+                .attr("stroke-width",1)
+                .style("opacity",0.8)
+                //.property("opacity",0.8)
+
+    var textS = svg.selectAll(".MyTextS")
+                .data(source)
+                .enter()
+                .append("text")
+                .attr("class","MyTextS")
+                .attr("transform","translate(0," + padding.top + ")")
+                .attr("x",0)
+                .attr("y",function(d,i){
+                    return (i+1/2)*innerSegmentS+4
+                })
+                .attr("width",padding.left)
+                .attr("height",innerSegmentS)
+                .text(function(d,i){
+                    return source[i]
+                })
+                .attr("fill","white")
+
+    var textP = svg.selectAll(".MyTextP")
+                .data(protocol)
+                .enter()
+                .append("text")
+                .attr("class","MyTextP")
+                .attr("transform","translate("+(+width/2+10)+"," + padding.top + ")")
+                .attr("x",0)
+                .attr("y",function(d,i){
+                    return (i+1/2)*innerSegmentP+4
+                })
+                .attr("width",padding.left)
+                .attr("height",innerSegmentP)
+                .attr("font-size","12px")
+                .text(function(d,i){
+                    return protocol[i]
+                })
+                .attr("fill","white")
+
+    var textD = svg.selectAll(".MyTextD")
+                .data(destination)
+                .enter()
+                .append("text")
+                .attr("class","MyTextD")
+                .attr("transform","translate("+(+width - padding.right +10)+"," + padding.top + ")")
+                .attr("x",0)
+                .attr("y",function(d,i){
+                    return (i+1/2)*innerSegmentD+3
+                })
+                .attr("width",padding.left)
+                .attr("height",innerSegmentD)
+                .attr("font-size","9px")
+                .text(function(d,i){
+                    return destination[i]
+                })
+                .attr("fill","white")
+
+    var timeSeg = ["0:00","1:00","2:00","3:00","4:00","5:00","6:00","7:00","8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00","24:00"]
+    var textT = svg.selectAll(".MyTextT")
+                .data(timeSeg)
+                .enter()
+                .append("text")
+                .attr("class","MyTextT")
+                .attr("transform","translate("+(width+40)+","+(padding2.top+5)+")")
+                .attr("x",0)
+                .attr("y",function(d,i){
+                    return i*rectheight
+                })
+                .attr("width",30)
+                .attr("height",rectheight)
+                .attr("fill","white")
+                .text(function(d,i){
+                    return timeSeg[i]
+                })
+
+    var textF = svg.selectAll(".MyTextF")
+                .data(timeFlow)
+                .enter()
+                .append("text")
+                .attr("class","MyTextF")
+                .attr("transform","translate(" + (padding2.left + width) + "," + padding2.top + ")")
+                .attr("x",function(d,i){
+                    return linear(d)+2
+                })
+                .attr("y",function(d,i){
+                    return i*rectheight+15
+                })
+                .attr("width",40)
+                .attr("height",rectheight)
+                .attr("fill","white")
+                .text(function(d,i){
+                    return ""+d
+                })
+
+    function reset(){
+        d3.selectAll(".MyTextS")
+                .transition()
+                .attr("fill","white")
+        d3.selectAll(".MyTextP")
+                .transition()
+                .attr("fill","white")
+        d3.selectAll(".MyTextD")
+                .transition()
+                .attr("fill","white")
+        d3.selectAll(".MyLineS2P")
+                .transition()
+                .attr("stroke",function(d,i){
+                    return pathcolor[d[1]]
+                })
+                .attr("stroke-width",1)
+                .style("opacity",0.8)
+                //.property("opacity",0.8)
+        d3.selectAll(".MyLineP2D")
+                .transition()
+                .attr("stroke",function(d,i){
+                    return pathcolor[d[1]]
+                })
+                .attr("stroke-width",1)
+                .style("opacity",0.8)
+                //.property("opacity",0.8)
+    }
+
+    function setMyTextS(focus,check){
+        d3.selectAll(".MyTextS")
+                .transition()
+                .duration(500)
+                .attr("fill",function(d,i){
+                    for(var j=0;j<path.length;j++){
+                        if(path[j][check]==focus&&path[j][0]==i)
+                            return "red"
+                    }
+                    return "grey"
+                })
+    }
+
+    function setMyTextP(focus,check){
+        d3.selectAll(".MyTextP")
+                .transition()
+                .duration(500)
+                .attr("fill",function(d,i){
+                    for(var j=0;j<path.length;j++){
+                        if(path[j][check]==focus&&path[j][1]==i)
+                            return "red"
+                    }
+                    return "grey"
+                })
+    }
+
+    function setMyTextD(focus,check){
+        d3.selectAll(".MyTextD")
+                .transition()
+                .duration(500)
+                .attr("fill",function(d,i){
+                    for(var j=0;j<path.length;j++){
+                        if(path[j][check]==focus&&path[j][2]==i)
+                            return "red"
+                    }
+                    return "grey"
+                })
+    }
+
+    function setMyLineS2P(focus,check){
+        d3.selectAll(".MyLineS2P")
+                .transition()
+                .attr("stroke",function(d,i){
+                    if(path[i][check]==focus)
+                        return pathcolor[d[1]]
+                    else
+                        return "grey"
+                })
+                .attr("stroke-width",function(d,i){
+                    if(path[i][check]==focus)
+                        return 3
+                    else
+                        return 1
+                })
+                .style("opacity",function(d,i){
+                    if(path[i][check]==focus)
+                        return 1.0
+                    else
+                        return 0.1
+                })
+                /*.property("opacity",function(d,i){
+                    if(path[i][check]==focus)
+                        return 1.0
+                    else
+                        return 0.1
+                })*/
+    }
+
+    function setMyLineP2D(focus,check){
+        d3.selectAll(".MyLineP2D")
+                .transition()
+                .attr("stroke",function(d,i){
+                    if(path[i][check]==focus)
+                        return pathcolor[d[1]]
+                    else
+                        return "grey"
+                })
+                .attr("stroke-width",function(d,i){
+                    if(path[i][check]==focus)
+                        return 3
+                    else
+                        return 1
+                })
+                .style("opacity",function(d,i){
+                    if(path[i][check]==focus)
+                        return 1.0
+                    else
+                        return 0.1
+                })
+                /*.property("opacity",function(d,i){
+                    if(path[i][check]==focus)
+                        return 1.0
+                    else
+                        return 0.1
+                })*/
+
+    }
+
+    function setGraph(focus,check){
+        var temp
+        if((+check)==0)
+            temp = sourceFlow[focus]
+        else
+            temp = destinationFlow[focus]
+        var maxTemp = d3.max(temp)
+        var linearTemp = d3.scale.linear()
+            .domain([0,maxTemp])
+            .range([0,widthD-padding2.left-padding2.right])
+
+        d3.selectAll(".MyRect")
+                .transition()
+                .duration(500)
+                .attr("width",function(d,i){
+                    return linearTemp(temp[i])-rectpadding/2
+                })
+
+        d3.selectAll(".MyTextF")
+                .transition()
+                .duration(500)
+                .attr("x",function(d,i){
+                    return linearTemp(temp[i])+2
+                })
+                .text(function(d,i){
+                    return ""+temp[i]
+                })
+    }
+
+    function getPart(focusS,focusD,i){
+        var temp
+        if(((+focusS)==-1)&&((+focusD)==-1)){
+            temp = timeFlow
+        }
+        else if(+focusS==-1){
+            temp = destinationFlow[focusD]
+        }
+        else if(+focusD==-1){
+            temp = sourceFlow[focusS]
+        }
+        var all = 0
+        for(var j = 0; j<24;j++){
+            all+=(+temp[j])
+        }
+        return ""+(temp[i]*100/all).toFixed(2)+"%"
+    }
+
+    function resetPart(focusS,focusD,i){
+        var temp
+        if(((+focusS)==-1)&&((+focusD)==-1)){
+            temp = timeFlow
+        }
+        else if(+focusS==-1){
+            temp = destinationFlow[focusD]
+        }
+        else if(+focusD==-1){
+            temp = sourceFlow[focusS]
+        }
+        return temp[i]
+    }
+
+    var textS = svg.selectAll(".MyTextS")
+                .attr("fill","white")
+                .on("mouseover",function(d,i){
+                    focusS = i
+                    focusD = -1
+                    d3.selectAll(".MyTextS")
+                            .transition()
+                            .duration(500)
+                            .attr("fill",function(d,i){
+                                return (i==focusS)?"red":"grey"
+                            })
+                    setMyTextP(focusS,0)
+                    setMyTextD(focusS,0)
+                    setMyLineS2P(focusS,0)
+                    setMyLineP2D(focusS,0)
+                    setGraph(focusS,0)
+                })
+                .on("mouseout",function(d,i){
+                    reset();
+                })
+
+    var textP = svg.selectAll(".MyTextP")
+                .attr("fill","white")
+                .on("mouseover",function(d,i){
+                    focusP = i         
+                    d3.selectAll(".MyTextP")
+                            .transition()
+                            .duration(500)
+                            .attr("fill",function(d,i){
+                                return (i==focusP)?"red":"grey"
+                            })
+                    setMyTextS(focusP,1)
+                    setMyTextD(focusP,1)
+                    setMyLineS2P(focusP,1)
+                    setMyLineP2D(focusP,1)
+                })
+                .on("mouseout",function(d,i){
+                    reset();
+                })
+
+    var textD = svg.selectAll(".MyTextD")
+                .attr("fill","white")
+                .on("mouseover",function(d,i){
+                    focusD = i 
+                    focusS = -1            
+                    d3.selectAll(".MyTextD")
+                            .transition()
+                            .duration(500)
+                            .attr("fill",function(d,i){
+                                return (i==focusD)?"red":"grey"
+                            })
+                    setMyTextS(focusD,2)
+                    setMyTextP(focusD,2)
+                    setMyLineS2P(focusD,2)
+                    setMyLineP2D(focusD,2)
+                    setGraph(focusD,2)
+                })
+                .on("mouseout",function(d,i){
+                    reset();
+                })
+
+    var rects = svg.selectAll(".MyRect")
+                .attr("fill","#8fd1a3")
+                .on("mouseover",function(d,i){
+                    var ri = i
+                    d3.select(this)
+                            .transition()
+                            .attr("fill","yellow")
+                    d3.selectAll(".MyTextF")
+                            .transition()
+                            .text(function(d,i){  
+                                if(+i==+ri)
+                                    return getPart(focusS,focusD,i)
+                                else
+                                    return resetPart(focusS,focusD,i)
+                            })
+                })
+                .on("mouseout",function(d,i){
+                    d3.select(this)
+                            .transition()
+                            .duration(500)
+                            .attr("fill","#8fd1a3")
+                    d3.selectAll(".MyTextF")
+                            .transition()
+                            .text(function(d,i){
+                                 return resetPart(focusS,focusD,i)
+                            })
+                })
+})
+    </script>
+    </body>
+</html>
