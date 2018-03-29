@@ -1,4 +1,4 @@
 VisualInfo
 ======
 
-An data display test for fun
+A data display test for fun
